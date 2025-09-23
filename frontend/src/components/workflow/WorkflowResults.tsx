@@ -64,6 +64,50 @@ export const WorkflowResults: React.FC<WorkflowResultsProps> = ({ runs }) => {
               )}
             </div>
           )}
+          {result.type === 'product_details_table' && (
+            <div>
+              <div className="mb-2">
+                <span className="font-medium">Products ({result.count}):</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-300 text-xs">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border border-gray-300 px-2 py-1 text-left font-medium">ASIN</th>
+                      <th className="border border-gray-300 px-2 py-1 text-left font-medium">Title</th>
+                      <th className="border border-gray-300 px-2 py-1 text-left font-medium">Description</th>
+                      <th className="border border-gray-300 px-2 py-1 text-left font-medium">Bullet Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.value.map((product: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-2 py-1 font-mono">{product.asin}</td>
+                        <td className="border border-gray-300 px-2 py-1">{product.title}</td>
+                        <td className="border border-gray-300 px-2 py-1 max-w-xs truncate" title={product.description}>
+                          {product.description}
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1">
+                          {product.bullet_points && product.bullet_points.length > 0 ? (
+                            <ul className="list-disc list-inside">
+                              {product.bullet_points.slice(0, 3).map((point: string, pointIndex: number) => (
+                                <li key={pointIndex} className="text-xs">{point}</li>
+                              ))}
+                              {product.bullet_points.length > 3 && (
+                                <li className="text-xs text-gray-500">...and {product.bullet_points.length - 3} more</li>
+                              )}
+                            </ul>
+                          ) : (
+                            <span className="text-gray-400">No bullet points</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     ))

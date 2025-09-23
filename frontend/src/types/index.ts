@@ -29,7 +29,7 @@ export interface Workflow {
 
 export interface WorkflowNode {
   id: string
-  type: 'get_bestselling_asins' | 'get_asin_by_index' | 'get_asin_details'
+  type: 'get_bestselling_asins' | 'get_asin_by_index' | 'get_asin_details' | 'loop' | 'merge'
   position: { x: number; y: number }
   data: {
     label: string
