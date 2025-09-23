@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(./setup.sh:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(./run.sh)",
+      "Bash(docker-compose exec backend pytest:*)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(./test.sh)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
