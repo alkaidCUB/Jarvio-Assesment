@@ -221,7 +221,7 @@ def test_merge_without_loop():
     # Should fail - no corresponding Loop node
     assert run_data["status"] == "failed"
     assert "error_message" in run_data
-    assert "found no loop processing results to merge" in run_data["error_message"]
+    assert "expected loop_execution_results" in run_data["error_message"]
 
 
 def test_loop_merge_data_flow():

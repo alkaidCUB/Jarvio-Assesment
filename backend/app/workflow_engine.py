@@ -19,25 +19,72 @@ class WorkflowEngine:
         results = {}
         
         try:
+            # Track active loop context
+            active_loop = None
+            
             for node_id in execution_order:
                 node = next(n for n in nodes if n["id"] == node_id)
                 node_type = node.get("type")
                 
-                if node_type == "get_bestselling_asins":
-                    results[node_id] = self._execute_get_bestselling_asins(node, user)
-                elif node_type == "get_asin_by_index":
-                    results[node_id] = self._execute_get_asin_by_index(node, results, edges)
-                elif node_type == "get_asin_details":
-                    # Always execute - the method itself will handle loop context
-                    results[node_id] = self._execute_get_asin_details(node, results, edges)
-                elif node_type == "loop":
-                    results[node_id] = self._execute_loop(node, results, edges)
+                if node_type == "loop":
+                    # Execute loop node and set active loop context
+                    loop_result = self._execute_loop(node, results, edges)
+                    results[node_id] = loop_result
+                    active_loop = {
+                        "loop_id": node_id,
+                        "items": loop_result["items"],
+                        "current_index": 0
+                    }
+                    
                 elif node_type == "merge":
+                    # Execute merge node and clear active loop
                     results[node_id] = self._execute_merge(node, results, edges, nodes)
+                    active_loop = None
+                    
+                elif active_loop is not None:
+                    # We're in a loop context - execute this node for each loop item
+                    loop_results = []
+                    for i, item in enumerate(active_loop["items"]):
+                        # Create a temporary single-item input for this iteration
+                        temp_results = results.copy()
+                        temp_results[active_loop["loop_id"]] = {
+                            "type": "single_loop_item",
+                            "value": item,
+                            "loop_index": i
+                        }
+                        
+                        # Execute the node for this specific item
+                        item_result = self._execute_single_node(node, temp_results, edges, user)
+                        loop_results.append(item_result)
+                    
+                    # Store all the individual results
+                    results[node_id] = {
+                        "type": "loop_execution_results",
+                        "results": loop_results,
+                        "loop_id": active_loop["loop_id"],
+                        "count": len(loop_results)
+                    }
+                    
+                else:
+                    # Normal single execution outside of loop
+                    results[node_id] = self._execute_single_node(node, results, edges, user)
             
             return {"status": "success", "results": results}
         except Exception as e:
             return {"status": "error", "error": str(e)}
+    
+    def _execute_single_node(self, node: Dict, results: Dict, edges: List[Dict], user) -> Dict[str, Any]:
+        """Execute a single node - works for any node type"""
+        node_type = node.get("type")
+        
+        if node_type == "get_bestselling_asins":
+            return self._execute_get_bestselling_asins(node, user)
+        elif node_type == "get_asin_by_index":
+            return self._execute_get_asin_by_index(node, results, edges)
+        elif node_type == "get_asin_details":
+            return self._execute_get_asin_details(node, results, edges)
+        else:
+            raise ValueError(f"Unsupported node type: {node_type}")
     
     def _get_execution_order(self, nodes: List[Dict], edges: List[Dict]) -> List[str]:
         """Determine execution order based on node dependencies"""
@@ -118,52 +165,37 @@ class WorkflowEngine:
         }
     
     def _execute_get_asin_details(self, node: Dict, results: Dict, edges: List[Dict]) -> Dict[str, Any]:
-        """Execute get_asin_details node - handles both normal and loop contexts"""
+        """Execute get_asin_details node - processes single ASIN only"""
         
-        # Check if we're in a loop context
-        loop_context = self._get_active_loop_context(results)
+        # Find input from previous node
+        input_node_id = None
+        for edge in edges:
+            if edge["target"] == node["id"]:
+                input_node_id = edge["source"]
+                break
         
-        if loop_context:
-            # We're in a loop - process each ASIN individually
-            collected_results = []
-            for asin in loop_context["items"]:
-                try:
-                    # Process this specific ASIN
-                    item_result = asyncio.run(self._execute_get_asin_details_for_item(asin))
-                    collected_results.append(item_result)
-                except Exception as e:
-                    # Fail fast: if any ASIN fails, entire workflow fails
-                    raise ValueError(f"Failed processing ASIN {asin} in loop: {str(e)}")
-            
-            # Return collected results for Merge to use
-            return {
-                "type": "loop_processing_results",
-                "results": collected_results,
-                "loop_id": loop_context["loop_id"],
-                "count": len(collected_results)
-            }
-        else:
-            # Normal single execution (backward compatibility)
-            input_node_id = None
-            for edge in edges:
-                if edge["target"] == node["id"]:
-                    input_node_id = edge["source"]
-                    break
-            
-            if not input_node_id or input_node_id not in results:
-                raise ValueError(f"No input found for node {node['id']}")
-            
-            input_data = results[input_node_id]
-            if input_data["type"] != "single_asin":
-                raise ValueError(f"Expected single_asin input, got {input_data['type']}")
-            
+        if not input_node_id or input_node_id not in results:
+            raise ValueError(f"No input found for node {node['id']}")
+        
+        input_data = results[input_node_id]
+        
+        # Handle different input types
+        if input_data["type"] == "single_asin":
+            # Normal single execution
             asin = input_data["value"]
-            item_result = asyncio.run(self._execute_get_asin_details_for_item(asin))
-            
-            return {
-                "type": "product_details",
-                "value": item_result
-            }
+        elif input_data["type"] == "single_loop_item":
+            # Single item from loop iteration
+            asin = input_data["value"]
+        else:
+            raise ValueError(f"Expected single_asin or single_loop_item input, got {input_data['type']}")
+        
+        # Process single ASIN
+        item_result = asyncio.run(self._execute_get_asin_details_for_item(asin))
+        
+        return {
+            "type": "product_details",
+            "value": item_result
+        }
     
     def _get_active_loop_context(self, results: Dict) -> Dict[str, Any]:
         """Find if there's an active loop context in the results"""
@@ -205,36 +237,83 @@ class WorkflowEngine:
         }
     
     def _execute_merge(self, node: Dict, results: Dict, edges: List[Dict], nodes: List[Dict]) -> Dict[str, Any]:
-        """Execute merge node - collects loop processing results into consolidated output"""
+        """Execute merge node - pure collector that gathers loop execution results"""
         
-        # Find the processing node that contains our loop results
-        processing_results = None
-        for node_id, result in results.items():
-            if result.get("type") == "loop_processing_results":
-                processing_results = result
+        # Find the processing node that was executed in the loop
+        processing_node_id = None
+        for edge in edges:
+            if edge["target"] == node["id"]:
+                processing_node_id = edge["source"]
                 break
         
-        if not processing_results:
-            raise ValueError(f"Merge node {node['id']} found no loop processing results to merge")
+        if not processing_node_id or processing_node_id not in results:
+            raise ValueError(f"Merge node {node['id']} found no processing node results")
         
-        # Get the collected results from the processing node
-        collected_results = processing_results["results"]
+        processing_result = results[processing_node_id]
+        
+        # Check if this is loop execution results
+        if processing_result["type"] != "loop_execution_results":
+            raise ValueError(f"Merge node expected loop_execution_results, got {processing_result['type']}")
+        
+        # Extract the individual results from the loop execution
+        individual_results = processing_result["results"]
+        collected_values = []
+        
+        for result in individual_results:
+            if result["type"] == "product_details":
+                collected_values.append(result["value"])
+            else:
+                # For other result types, just collect the whole result
+                collected_values.append(result)
         
         # Determine output format based on the type of results
-        if all(isinstance(item, dict) and "asin" in item for item in collected_results):
+        if all(isinstance(item, dict) and "asin" in item for item in collected_values):
             # ASIN-based results - format as product details table
             return {
                 "type": "product_details_table",
-                "value": collected_results,
-                "count": len(collected_results)
+                "value": collected_values,
+                "count": len(collected_values)
             }
         else:
             # Generic results - format as generic table
             return {
                 "type": "generic_results_table", 
-                "value": collected_results,
-                "count": len(collected_results)
+                "value": collected_values,
+                "count": len(collected_values)
             }
+    
+    def _find_processing_node_between_loop_and_merge(self, loop_node_id: str, merge_node_id: str, edges: List[Dict], nodes: List[Dict]) -> Dict[str, Any]:
+        """Find the processing node that sits between Loop and Merge"""
+        # Find nodes that are connected from Loop to Merge
+        # Loop -> Processing Node -> Merge
+        
+        # Find nodes that Loop connects to
+        loop_targets = []
+        for edge in edges:
+            if edge["source"] == loop_node_id:
+                loop_targets.append(edge["target"])
+        
+        # Find nodes that connect to Merge
+        merge_sources = []
+        for edge in edges:
+            if edge["target"] == merge_node_id:
+                merge_sources.append(edge["source"])
+        
+        # Find the intersection - the node that Loop connects to AND that connects to Merge
+        processing_node_ids = set(loop_targets) & set(merge_sources)
+        
+        if not processing_node_ids:
+            return None
+        
+        # Get the first processing node (there should typically be only one)
+        processing_node_id = list(processing_node_ids)[0]
+        
+        # Find the actual node object
+        for node in nodes:
+            if node["id"] == processing_node_id:
+                return node
+        
+        return None
     
     def _find_paired_loop(self, merge_node_id: str, edges: List[Dict]) -> str:
         """Find the loop node that pairs with this merge node"""

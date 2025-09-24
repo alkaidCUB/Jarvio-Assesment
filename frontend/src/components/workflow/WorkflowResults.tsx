@@ -64,13 +64,28 @@ export const WorkflowResults: React.FC<WorkflowResultsProps> = ({ runs }) => {
               )}
             </div>
           )}
-          {result.type === 'loop_processing_results' && (
+          {result.type === 'loop_items' && (
             <div>
               <div className="mb-2">
-                <span className="font-medium">Loop Results ({result.count}):</span>
+                <span className="font-medium">Loop Items ({result.count}):</span>
+              </div>
+              <div className="text-xs text-gray-600 mb-2">
+                🔄 Splitting array into individual items for processing:
+              </div>
+              <ul className="list-disc list-inside mt-1 text-xs">
+                {result.items.map((item: string, index: number) => (
+                  <li key={index} className="text-blue-600 font-mono">{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {result.type === 'loop_execution_results' && (
+            <div>
+              <div className="mb-2">
+                <span className="font-medium">Loop Execution Results ({result.count}):</span>
               </div>
               <div className="text-xs text-gray-600">
-                Processing completed for {result.count} items. Results collected by Merge node.
+                Node executed {result.count} times (once per loop item). Results will be collected by Merge node.
               </div>
             </div>
           )}
