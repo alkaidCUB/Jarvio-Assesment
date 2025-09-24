@@ -64,6 +64,16 @@ export const WorkflowResults: React.FC<WorkflowResultsProps> = ({ runs }) => {
               )}
             </div>
           )}
+          {result.type === 'loop_processing_results' && (
+            <div>
+              <div className="mb-2">
+                <span className="font-medium">Loop Results ({result.count}):</span>
+              </div>
+              <div className="text-xs text-gray-600">
+                Processing completed for {result.count} items. Results collected by Merge node.
+              </div>
+            </div>
+          )}
           {result.type === 'product_details_table' && (
             <div>
               <div className="mb-2">

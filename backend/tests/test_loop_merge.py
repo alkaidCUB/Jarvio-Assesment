@@ -172,7 +172,7 @@ def test_loop_node_validation():
     # Should fail with validation error
     assert run_data["status"] == "failed"
     assert "error_message" in run_data
-    assert "Loop node requires asin_list input" in run_data["error_message"]
+    assert "Loop node requires array input" in run_data["error_message"]
 
 
 def test_merge_without_loop():
@@ -221,7 +221,7 @@ def test_merge_without_loop():
     # Should fail - no corresponding Loop node
     assert run_data["status"] == "failed"
     assert "error_message" in run_data
-    assert "no corresponding Loop node" in run_data["error_message"]
+    assert "found no loop processing results to merge" in run_data["error_message"]
 
 
 def test_loop_merge_data_flow():
