@@ -185,11 +185,28 @@ export const WorkflowEditorPage: React.FC = () => {
                 <Plus className="h-4 w-4 inline mr-2" />
                 Get ASIN Details
               </button>
+              <button
+                onClick={() => addNode('loop')}
+                className="w-full text-left px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded"
+              >
+                <Plus className="h-4 w-4 inline mr-2" />
+                Loop
+              </button>
+              <button
+                onClick={() => addNode('merge')}
+                className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 rounded"
+              >
+                <Plus className="h-4 w-4 inline mr-2" />
+                Merge
+              </button>
             </div>
             <div className="mt-3 pt-3 border-t border-gray-200">
               <div className="text-xs text-gray-500 space-y-1">
                 <div>
                   🔗 <strong>Sequential Flow:</strong> Best Selling ASINs → Get by Index → ASIN Details
+                </div>
+                <div>
+                  🔄 <strong>Batch Flow:</strong> Best Selling ASINs → Loop → ASIN Details → Merge
                 </div>
                 <div>
                   💡 <strong>Tips:</strong> Connect nodes to pass data between them. Delete with red X or Delete key.

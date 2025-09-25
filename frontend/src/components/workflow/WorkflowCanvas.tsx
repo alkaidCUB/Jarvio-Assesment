@@ -18,6 +18,8 @@ import 'reactflow/dist/style.css'
 import { GetBestSellingAsinsNode } from './nodes/GetBestSellingAsinsNode'
 import { GetAsinByIndexNode } from './nodes/GetAsinByIndexNode'
 import { GetAsinDetailsNode } from './nodes/GetAsinDetailsNode'
+import { LoopNode } from './nodes/LoopNode'
+import { MergeNode } from './nodes/MergeNode'
 import { isValidConnection as isValidWorkflowConnection } from '@/utils/workflowUtils'
 import type { WorkflowNode, WorkflowEdge } from '@/types'
 
@@ -33,6 +35,8 @@ const nodeTypes: NodeTypes = {
   get_bestselling_asins: GetBestSellingAsinsNode,
   get_asin_by_index: GetAsinByIndexNode,
   get_asin_details: GetAsinDetailsNode,
+  loop: LoopNode,
+  merge: MergeNode,
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
