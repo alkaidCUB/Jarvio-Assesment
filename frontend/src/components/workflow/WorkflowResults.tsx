@@ -23,7 +23,13 @@ export const WorkflowResults: React.FC<WorkflowResultsProps> = ({ runs }) => {
   const formatResults = (results: Record<string, any>) => {
     if (!results) return null
 
-    return Object.entries(results).map(([nodeId, result]) => (
+    // Filter out individual loop iterations - only show final merged results
+    const filteredResults = Object.entries(results).filter(([nodeId, result]) => {
+      // Hide loop_items and loop_execution_results - only show final tables and source data
+      return !['loop_items', 'loop_execution_results'].includes(result.type)
+    })
+
+    return filteredResults.map(([nodeId, result]) => (
       <div key={nodeId} className="mb-4">
         <h4 className="font-semibold text-gray-700 mb-2">{nodeId}</h4>
         <div className="bg-gray-50 p-3 rounded text-sm">

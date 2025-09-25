@@ -150,11 +150,17 @@ def test_loop_node_validation():
                     "id": "loop-invalid",
                     "type": "loop",
                     "data": {}
+                },
+                {
+                    "id": "merge-invalid",
+                    "type": "merge",
+                    "data": {}
                 }
             ],
             "edges": [
                 {"id": "edge-1", "source": "get-asins-invalid", "target": "get-index-invalid"},
-                {"id": "edge-2", "source": "get-index-invalid", "target": "loop-invalid"}
+                {"id": "edge-2", "source": "get-index-invalid", "target": "loop-invalid"},
+                {"id": "edge-3", "source": "loop-invalid", "target": "merge-invalid"}
             ]
         }
     }

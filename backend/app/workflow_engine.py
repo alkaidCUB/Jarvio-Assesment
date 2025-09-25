@@ -14,6 +14,9 @@ class WorkflowEngine:
         nodes = flow_data.get("nodes", [])
         edges = flow_data.get("edges", [])
         
+        # Validate Loop→Merge pairs before execution
+        self._validate_loop_merge_pairs(nodes, edges)
+        
         # Build execution graph
         execution_order = self._get_execution_order(nodes, edges)
         results = {}
@@ -106,4 +109,44 @@ class WorkflowEngine:
                         queue.append(edge["target"])
         
         return result
+    
+    def _validate_loop_merge_pairs(self, nodes: List[Dict], edges: List[Dict]) -> None:
+        """Validate that every Loop node has a corresponding Merge node"""
+        loop_nodes = [n for n in nodes if n.get("type") == "loop"]
+        
+        for loop_node in loop_nodes:
+            # Find if this loop has a corresponding merge by checking if there's a path from loop to merge
+            has_merge = False
+            for edge in edges:
+                if edge["source"] == loop_node["id"]:
+                    # Check if we can reach a merge node from this loop
+                    if self._can_reach_merge_from_loop(loop_node["id"], edges, nodes):
+                        has_merge = True
+                        break
+            
+            if not has_merge:
+                raise ValueError(f"Loop node '{loop_node['id']}' must have a corresponding Merge node")
+    
+    def _can_reach_merge_from_loop(self, loop_id: str, edges: List[Dict], nodes: List[Dict]) -> bool:
+        """Check if we can reach a merge node from the given loop node"""
+        visited = set()
+        queue = [loop_id]
+        
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+            
+            # Check if current node is a merge
+            current_node = next((n for n in nodes if n["id"] == current), None)
+            if current_node and current_node.get("type") == "merge":
+                return True
+            
+            # Add all targets of current node to queue
+            for edge in edges:
+                if edge["source"] == current:
+                    queue.append(edge["target"])
+        
+        return False
     
